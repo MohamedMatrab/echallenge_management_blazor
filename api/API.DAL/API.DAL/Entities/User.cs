@@ -2,6 +2,6 @@
 
 public class User : IdentityUser
 {
-    public string FirstName { get; set; } = default!;
-    public string LastName { get; set; } = default!;
+    public string FirstName { get; set; } = "fn";
+    public string LastName { get; set; } = "ln";
 }

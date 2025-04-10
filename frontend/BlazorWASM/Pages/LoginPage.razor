@@ -1,33 +1,115 @@
 ﻿@page "/login"
-
-@using Blazored.LocalStorage
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Json
+@using BlazorWASM.Providers
+@using SharedBlocks.Dtos.Request
+@using SharedBlocks.Dtos.Response
 @using Microsoft.AspNetCore.Components.Authorization
-
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
 @inject HttpClient Http
+@inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILocalStorageService LocalStorage
-@inject IConfiguration Configuration
 
-<h3>Login</h3>
-@* <EditForm Model="user" OnSubmit="HandleLogin"> *@
-@*     <label for="username">Name</label> *@
-@*     <InputText id="username" @bind-Value="user.Username" /> *@
-@*     <label for="password">Password</label> *@
-@*     <InputText id="password" @bind-Value="user.Password" type="password" /> *@
-@*     <button type="submit" class="btn btn-primary">Do it!</button> *@
-@* </EditForm> *@
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Login</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+                        <div class="alert alert-danger" style="display: @(showError ? "block" : "none")">
+                            @errorMessage
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="email">UserName</label>
+                            <InputText id="email" @bind-Value="loginModel.UserName" class="form-control" />
+                            <ValidationMessage For="@(() => loginModel.UserName)" class="text-danger" />
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <InputText id="password" type="password" @bind-Value="loginModel.Password" class="form-control" />
+                            <ValidationMessage For="@(() => loginModel.Password)" class="text-danger" />
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span> Loading...</span>
+                                }
+                                else
+                                {
+                                    <span>Login</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-footer text-center">
+                    <p class="mb-0">Don't have an account? <a href="/register">Register</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    // UserLoginDto user = new UserLoginDto();
-    // async Task HandleLogin()
-    // {
-        //var result = await Http.PostAsJsonAsync($"{Configuration["ApiUrl"]}api/auth", user);
-        //var token = await result.Content.ReadAsStringAsync();
+    private LoginUserDTO loginModel = new LoginUserDTO();
+    private bool isLoading = false;
+    private bool showError = false;
+    private string errorMessage = string.Empty;
 
-        //Just hard coding the token for now :)
-        // var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlNoYWhyaXlhciIsInJvbGUiOiJBZG1pbiIsImlhdCI6MTUxNjIzOTAyMn0.l9E7Oypb-ozndpFUkeVhOYzhtjGEuFmdYdAxhbpXAFY";
+    private async Task HandleLogin()
+    {
+        showError = false;
+        isLoading = true;
 
-        // await LocalStorage.SetItemAsync("token", token);
-        // await AuthStateProvider.GetAuthenticationStateAsync();
-    // }
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/Auth/login", loginModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var tokenResponse = await response.Content.ReadFromJsonAsync<AuthResult>();
+
+                if (tokenResponse != null && !string.IsNullOrEmpty(tokenResponse.Token))
+                {
+                    // await LocalStorage.SetItemAsync("authToken", tokenResponse.Token);
+
+                    await ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(tokenResponse.Token);
+
+                    NavigationManager.NavigateTo("/");
+                }
+                else
+                {
+                    showError = true;
+                    errorMessage = "Invalid authentication response";
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                showError = true;
+                errorMessage = $"Login failed: {(string.IsNullOrEmpty(errorContent) ? response.ReasonPhrase : errorContent)}";
+            }
+        }
+        catch (Exception ex)
+        {
+            showError = true;
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 }

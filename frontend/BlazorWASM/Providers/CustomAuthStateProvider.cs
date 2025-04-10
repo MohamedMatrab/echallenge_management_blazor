@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
@@ -19,13 +20,13 @@ public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClie
 
         var token = await _localStorage.GetItemAsStringAsync(tokenKey);
 
-        if (!string.IsNullOrEmpty(token))
+        if (!string.IsNullOrEmpty(token) && token.Split('.').Length == 3)
         {
             identity = new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt");
             _http.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token.Replace("\"", ""));
         }
-
+        await MarkUserAsLoggedOut();
         var user = new ClaimsPrincipal(identity);
         var state = new AuthenticationState(user);
 
@@ -54,5 +55,30 @@ public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClie
             case 3: base64 += "="; break;
         }
         return Convert.FromBase64String(base64);
+    }
+
+
+    public async Task MarkUserAsAuthenticated(string token)
+    {
+        await _localStorage.SetItemAsync(tokenKey, token);
+        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var authenticatedUser = new ClaimsPrincipal(
+            new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt"));
+
+        var authState = Task.FromResult(new AuthenticationState(authenticatedUser));
+
+        NotifyAuthenticationStateChanged(authState);
+    }
+
+    public async Task MarkUserAsLoggedOut()
+    {
+        await _localStorage.RemoveItemAsync(tokenKey);
+        _http.DefaultRequestHeaders.Authorization = null;
+
+        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
+        var authState = Task.FromResult(new AuthenticationState(anonymousUser));
+
+        NotifyAuthenticationStateChanged(authState);
     }
 }

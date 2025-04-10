@@ -1,6 +1,6 @@
 ﻿namespace SharedBlocks.Dtos.Response;
 
-public class RefreshTokenResponseDTO
+public class RefreshTokenResponseDto
 {
     public string? UserId { get; set; }
     public bool Success { get; set; }

@@ -1,8 +1,9 @@
 ﻿using API.DAL.Entities;
+using API.Service.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 
-namespace API.Service.Services;
+namespace API.SERVICE.Services.Implementations;
 
 public class IdentityDataInitializer(
     UserManager<User> userManager,
@@ -53,14 +54,14 @@ public class IdentityDataInitializer(
             userName: "admin"
         );
 
-        await CreateUserIfNotExists(
-            email: managerEmail,
-            password: managerPassword,
-            roles: ["Manager"],
-            firstName: "Manager",
-            lastName: "User",
-            userName: "manager"
-        );
+        //await CreateUserIfNotExists(
+        //    email: managerEmail,
+        //    password: managerPassword,
+        //    roles: ["Manager"],
+        //    firstName: "Manager",
+        //    lastName: "User",
+        //    userName: "manager"
+        //);
 
         await CreateUserIfNotExists(
             email: userEmail,
