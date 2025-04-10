@@ -1,0 +1,274 @@
+﻿@page "/books/details/{Id:guid}"
+@using BlazorWASM.Services
+@using SharedBlocks.Dtos.Books
+@inject IBookApiClient BookApiClient
+@inject NavigationManager NavigationManager
+@inject IRoleService RoleService
+
+<PageTitle>Book Details</PageTitle>
+
+<div class="container">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+        <button class="btn btn-secondary" @onclick="BackToList">Back to List</button>
+    }
+    else if (book == null)
+    {
+        <div class="alert alert-warning" role="alert">
+            Book not found.
+        </div>
+        <button class="btn btn-secondary" @onclick="BackToList">Back to List</button>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col">
+                <button class="btn btn-secondary" @onclick="BackToList">
+                    <i class="bi bi-arrow-left"></i> Back to List
+                </button>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">@book.Title</h2>
+                @if (isAdmin)
+                {
+                    <div>
+                        <button class="btn btn-primary me-2" @onclick="() => EditBook(book.Id)">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-danger" @onclick="() => ConfirmDeleteBook(book)">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                }
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4>Book Information</h4>
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Author</th>
+                                    <td>@book.Author</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Genre</th>
+                                    <td>@book.Genre</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Published Date</th>
+                                    <td>@book.PublishedDate.ToString("MMMM dd, yyyy")</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">ISBN</th>
+                                    <td>@book.ISBN</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Language</th>
+                                    <td>@book.Language</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Page Count</th>
+                                    <td>@book.PageCount</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Available Stock</th>
+                                    <td>@book.AvailableStock</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4>Additional Information</h4>
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Created At</th>
+                                    <td>@(book.CreatedAt?.ToString("g") ?? "N/A")</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Created By</th>
+                                    <td>@(book.CreatedBy ?? "N/A")</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Last Updated</th>
+                                    <td>@(book.UpdatedAt?.ToString("g") ?? "N/A")</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Updated By</th>
+                                    <td>@(book.UpdatedBy ?? "N/A")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                @if (book.Reviews != null && book.Reviews.Any())
+                {
+                    <div class="mt-4">
+                        <h4>Reviews</h4>
+                        <div class="list-group">
+                            @foreach (var review in book.Reviews)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="mb-1">@review.ReviewerName</h5>
+                                        <div>
+                                            @for (int i = 0; i < review.Rating; i++)
+                                            {
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            }
+                                            @for (int i = review.Rating; i < 5; i++)
+                                            {
+                                                <i class="bi bi-star text-warning"></i>
+                                            }
+                                        </div>
+                                    </div>
+                                    <p class="mb-1">@review.ReviewText</p>
+                                    <small>@review.ReviewDate.ToString("MMMM dd, yyyy")</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal fade show" tabindex="-1" style="display: block;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the book "@bookToDelete?.Title" by @bookToDelete?.Author?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteBook">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private BookDTO? book;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    
+    private bool showDeleteConfirmation = false;
+    private BookDTO? bookToDelete;
+	private bool isAdmin = false;
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBook();
+        isAdmin = await RoleService.HasRoleAsync("Admin");
+
+    }
+
+    private async Task LoadBook()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            
+            var response = await BookApiClient.GetBookByIdAsync(Id);
+
+            if (response.Success && response.Data != null)
+            {
+                book = response.Data;
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading book: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void BackToList()
+    {
+        NavigationManager.NavigateTo("/books");
+    }
+
+    private void EditBook(Guid id)
+    {
+        NavigationManager.NavigateTo($"/books/edit/{id}");
+    }
+
+    private void ConfirmDeleteBook(BookDTO book)
+    {
+        bookToDelete = book;
+        showDeleteConfirmation = true;
+    }
+
+    private void CancelDelete()
+    {
+        bookToDelete = null;
+        showDeleteConfirmation = false;
+    }
+
+    private async Task DeleteBook()
+    {
+        if (bookToDelete == null)
+            return;
+            
+        try
+        {
+            var response = await BookApiClient.DeleteBookAsync(bookToDelete.Id);
+            
+            if (response.Success)
+            {
+                NavigationManager.NavigateTo("/books");
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting book: {ex.Message}";
+        }
+        finally
+        {
+            bookToDelete = null;
+            showDeleteConfirmation = false;
+        }
+    }
+}

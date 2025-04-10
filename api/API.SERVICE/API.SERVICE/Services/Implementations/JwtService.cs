@@ -125,9 +125,9 @@ public class JwtService
                 Errors = ["User not found"]
             };
 
-            var userClaims = await userManager.GetClaimsAsync(user);
-            var roles = await userManager.GetRolesAsync(user);
-            var roleClaims = roles.Select(role => new Claim("roles", role)).ToList();
+            var userClaims = await _userManager.GetClaimsAsync(user);
+            var roles = await _userManager.GetRolesAsync(user);
+            var roleClaims = roles.Select(role => new Claim(ClaimTypes.Role, role)).ToList();
             var jwtTokenHandler = new JwtSecurityTokenHandler();
             var claims = new[]
                {

@@ -2,6 +2,7 @@
 using API.DAL.Data;
 using API.DAL.Entities;
 using API.Service.Services;
+using API.SERVICE.Mappers;
 using API.SERVICE.Services;
 using API.SERVICE.Services.Implementations;
 using Microsoft.AspNetCore.Identity;
@@ -18,6 +19,9 @@ public static class DependencyInjection
         services.AddTransient<IIdentityDataInitializer,IdentityDataInitializer>();
         services.AddIdentity<User, Role>(options => { options.SignIn.RequireConfirmedAccount = true; })
     .AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+
+        services.AddAutoMapper(typeof(MappingProfile));
+        services.AddScoped<IBookService, BookService>();
         services.AddTransient<IJwtService,JwtService>();
         services.AddScoped<IAuthService,AuthService>();
         return services;

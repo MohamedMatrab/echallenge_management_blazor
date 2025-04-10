@@ -1,12 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace BlazorWASM.Providers;
 
-public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClient http) 
+public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClient http)
     : AuthenticationStateProvider
 {
     private readonly ILocalStorageService _localStorage = localStorage;
@@ -26,7 +25,7 @@ public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClie
             _http.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token.Replace("\"", ""));
         }
-        await MarkUserAsLoggedOut();
+        //await MarkUserAsLoggedOut();
         var user = new ClaimsPrincipal(identity);
         var state = new AuthenticationState(user);
 
@@ -43,7 +42,7 @@ public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClie
         if (keyValuePairs == null)
             return [];
         return keyValuePairs
-            .Where(e=>e.Value is not null)
+            .Where(e => e.Value is not null)
             .Select(kvp => new Claim(kvp.Key, $"{kvp.Value?.ToString()}"));
     }
 
@@ -80,5 +79,6 @@ public class CustomAuthStateProvider(ILocalStorageService localStorage, HttpClie
         var authState = Task.FromResult(new AuthenticationState(anonymousUser));
 
         NotifyAuthenticationStateChanged(authState);
+
     }
 }

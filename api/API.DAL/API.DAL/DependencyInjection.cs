@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using API.DAL.Repositories;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace API.DAL;
@@ -11,12 +12,8 @@ public static class DependencyInjection
         {
             options.UseSqlServer(configuration.GetConnectionString("Default"));
         });
-        //services.Seed
+        services.AddScoped<IBookRepository, BookRepository>();
+
         return services;
     }
-
-    //public static void SeedData(this IHost host)
-    //{
-    //    host.SeedDefa
-    //}
 }

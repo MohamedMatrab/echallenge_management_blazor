@@ -1,0 +1,347 @@
+﻿@page "/books/edit/{Id:guid}"
+@using BlazorWASM.Services
+@using SharedBlocks.Dtos.Books
+@inject IBookApiClient BookApiClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Book</PageTitle>
+
+<div class="container">
+    <h1>Edit Book</h1>
+
+    <div class="row mb-3">
+        <div class="col">
+            <button class="btn btn-secondary" @onclick="BackToList">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+        <button class="btn btn-secondary" @onclick="BackToList">Back to List</button>
+    }
+    else if (bookModel == null)
+    {
+        <div class="alert alert-warning" role="alert">
+            Book not found.
+        </div>
+        <button class="btn btn-secondary" @onclick="BackToList">Back to List</button>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <EditForm Model="@bookModel" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger mb-4" />
+
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                                <InputText id="title" class="form-control" @bind-Value="bookModel.Title" />
+                                <ValidationMessage For="@(() => bookModel.Title)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="author" class="form-label">Author <span class="text-danger">*</span></label>
+                                <InputText id="author" class="form-control" @bind-Value="bookModel.Author" />
+                                <ValidationMessage For="@(() => bookModel.Author)" class="text-danger" />
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="genre" class="form-label">Genre <span class="text-danger">*</span></label>
+                                    <InputSelect id="genre" class="form-select" @bind-Value="bookModel.Genre">
+                                        <option value="">-- Select Genre --</option>
+                                        @foreach (var genre in genres)
+                                        {
+                                            <option value="@genre">@genre</option>
+                                        }
+                                        <option value="Other">Other</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => bookModel.Genre)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="language" class="form-label">Language <span class="text-danger">*</span></label>
+                                    <InputText id="language" class="form-control" @bind-Value="bookModel.Language" />
+                                    <ValidationMessage For="@(() => bookModel.Language)" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="publishedDate" class="form-label">Published Date <span class="text-danger">*</span></label>
+                                    <InputDate id="publishedDate" class="form-control" @bind-Value="bookModel.PublishedDate" />
+                                    <ValidationMessage For="@(() => bookModel.PublishedDate)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="pageCount" class="form-label">Page Count <span class="text-danger">*</span></label>
+                                    <InputNumber id="pageCount" class="form-control" @bind-Value="bookModel.PageCount" />
+                                    <ValidationMessage For="@(() => bookModel.PageCount)" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="isbn" class="form-label">ISBN <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <InputText id="isbn" class="form-control" @bind-Value="bookModel.ISBN" @oninput="CheckISBN" />
+                                        @if (isCheckingIsbn)
+                                        {
+                                            <span class="input-group-text">
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            </span>
+                                        }
+                                        else if (isbnChecked)
+                                        {
+                                            <span class="input-group-text @(isbnUnique ? "bg-success text-white" : "bg-danger text-white")">
+                                                <i class="bi @(isbnUnique ? "bi-check-lg" : "bi-x-lg")"></i>
+                                            </span>
+                                        }
+                                    </div>
+                                    <ValidationMessage For="@(() => bookModel.ISBN)" class="text-danger" />
+                                    @if (!isbnUnique && isbnChecked)
+                                    {
+                                        <div class="text-danger small mt-1">This ISBN is already in use by another book.</div>
+                                    }
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="availableStock" class="form-label">Available Stock <span class="text-danger">*</span></label>
+                                    <InputNumber id="availableStock" class="form-control" @bind-Value="bookModel.AvailableStock" />
+                                    <ValidationMessage For="@(() => bookModel.AvailableStock)" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <button type="button" class="btn btn-secondary me-md-2" @onclick="BackToDetails">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@(isSaving || (!isbnUnique && isbnChecked))">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Book</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h5 class="mb-0">Book Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>ID:</strong> @Id</p>
+                        @if (originalBook != null)
+                        {
+                            <p><strong>Created:</strong> @(originalBook.CreatedAt?.ToString("g") ?? "N/A")</p>
+                            <p><strong>Created By:</strong> @(originalBook.CreatedBy ?? "N/A")</p>
+                            <p><strong>Last Updated:</strong> @(originalBook.UpdatedAt?.ToString("g") ?? "N/A")</p>
+                            <p><strong>Updated By:</strong> @(originalBook.UpdatedBy ?? "N/A")</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private UpdateBookDTO? bookModel;
+    private BookDTO? originalBook;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+
+    private List<string> genres = new List<string>
+    {
+        "Fiction", "Non-Fiction", "Science Fiction", "Fantasy", "Mystery",
+        "Romance", "Thriller", "Horror", "Biography", "History", "Self-Help"
+    };
+
+    // ISBN uniqueness check
+    private bool isCheckingIsbn = false;
+    private bool isbnChecked = false;
+    private bool isbnUnique = true;
+    private string lastCheckedIsbn = string.Empty;
+    private System.Threading.Timer? isbnCheckTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBook();
+    }
+
+    private async Task LoadBook()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+
+            var response = await BookApiClient.GetBookByIdAsync(Id);
+
+            if (response.Success && response.Data != null)
+            {
+                originalBook = response.Data;
+
+                // Map to UpdateBookDTO
+                bookModel = new UpdateBookDTO
+                    {
+                        Id = originalBook.Id,
+                        Title = originalBook.Title,
+                        Author = originalBook.Author,
+                        Genre = originalBook.Genre,
+                        Language = originalBook.Language,
+                        PublishedDate = originalBook.PublishedDate,
+                        PageCount = originalBook.PageCount,
+                        ISBN = originalBook.ISBN,
+                        AvailableStock = originalBook.AvailableStock
+                    };
+
+                // Consider ISBN valid initially since it's the original one
+                lastCheckedIsbn = originalBook.ISBN;
+                isbnChecked = true;
+                isbnUnique = true;
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading book: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void BackToList()
+    {
+        NavigationManager.NavigateTo("/books");
+    }
+
+    private void BackToDetails()
+    {
+        NavigationManager.NavigateTo($"/books/details/{Id}");
+    }
+
+    public void Dispose()
+    {
+        isbnCheckTimer?.Dispose();
+    }
+
+    private void CheckISBN(ChangeEventArgs e)
+    {
+        string isbn = e.Value?.ToString() ?? string.Empty;
+
+        // If it's the original ISBN, we know it's valid
+        if (isbn == originalBook?.ISBN)
+        {
+            isbnChecked = true;
+            isbnUnique = true;
+            lastCheckedIsbn = isbn;
+            return;
+        }
+
+        // Don't recheck if ISBN hasn't changed
+        if (isbn == lastCheckedIsbn)
+            return;
+
+        // Reset check status
+        isbnChecked = false;
+
+        // Cancel previous timer if any
+        isbnCheckTimer?.Dispose();
+
+        // Start a new timer to delay the check until typing stops
+        isbnCheckTimer = new System.Threading.Timer(async _ =>
+        {
+            if (string.IsNullOrWhiteSpace(isbn))
+            {
+                isbnChecked = false;
+                return;
+            }
+
+            await InvokeAsync(async () =>
+            {
+                try
+                {
+                    isCheckingIsbn = true;
+                    StateHasChanged();
+
+                    isbnUnique = await BookApiClient.IsISBNUniqueAsync(isbn, Id);
+                    lastCheckedIsbn = isbn;
+                    isbnChecked = true;
+                }
+                catch
+                {
+                    isbnChecked = false;
+                }
+                finally
+                {
+                    isCheckingIsbn = false;
+                    StateHasChanged();
+                }
+            });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (bookModel == null)
+            return;
+
+        try
+        {
+            isSaving = true;
+            errorMessage = string.Empty;
+
+            var response = await BookApiClient.UpdateBookAsync(bookModel);
+
+            if (response.Success)
+            {
+                NavigationManager.NavigateTo($"/books/details/{Id}");
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating book: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
