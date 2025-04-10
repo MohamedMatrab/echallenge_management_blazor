@@ -21,7 +21,7 @@ public class IdentityDataInitializer(
 
     private async Task SeedRoles()
     {
-        string[] roleNames = { "Admin", "Manager", "User" };
+        string[] roleNames = { "Admin", "User" };
 
         foreach (var roleName in roleNames)
         {
@@ -49,7 +49,8 @@ public class IdentityDataInitializer(
             password: adminPassword,
             roles: ["Admin"],
             firstName: "Admin",
-            lastName: "User"
+            lastName: "User",
+            userName: "admin"
         );
 
         await CreateUserIfNotExists(
@@ -57,7 +58,8 @@ public class IdentityDataInitializer(
             password: managerPassword,
             roles: ["Manager"],
             firstName: "Manager",
-            lastName: "User"
+            lastName: "User",
+            userName: "manager"
         );
 
         await CreateUserIfNotExists(
@@ -65,11 +67,12 @@ public class IdentityDataInitializer(
             password: userPassword,
             roles: ["User"],
             firstName: "Regular",
-            lastName: "User"
+            lastName: "User",
+            userName: "user"
         );
     }
 
-    private async Task CreateUserIfNotExists(string email, string password, string[] roles, string firstName, string lastName)
+    private async Task CreateUserIfNotExists(string email, string password, string[] roles, string userName,string firstName,string lastName)
     {
         var user = await _userManager.FindByEmailAsync(email);
 
@@ -77,7 +80,7 @@ public class IdentityDataInitializer(
         {
             user = new User
             {
-                UserName = email,
+                UserName = userName,
                 Email = email,
                 EmailConfirmed = true,
                 FirstName = firstName,

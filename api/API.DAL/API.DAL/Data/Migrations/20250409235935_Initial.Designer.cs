@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.DAL.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250409151541_Initial")]
+    [Migration("20250409235935_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -161,6 +161,7 @@ namespace API.DAL.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
@@ -205,6 +206,7 @@ namespace API.DAL.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("UserName")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
